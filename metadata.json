@@ -1,0 +1,7 @@
+{
+  "name": "ECOMITRA - Smart Waste Management",
+  "description": "An AI-powered smart dustbin monitoring system designed for cleaner and greener urban environments.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
