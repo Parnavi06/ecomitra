@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { api } from '../services/api';
-import { DashboardStats, Bin, BinStatus } from '../types';
+import { DashboardStats, Bin, BinStatus, UserRole } from '../types';
 import AdminSidebar from '../components/AdminSidebar';
 
 const AdminDashboard: React.FC = () => {
@@ -122,6 +122,7 @@ const AdminOverview: React.FC = () => {
 };
 
 const AdminBins: React.FC = () => {
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -134,16 +135,17 @@ const AdminBins: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
-      <div className="flex justify-between items-end">
-        <div>
+      <div className="flex flex-row justify-between items-start mb-8">
+        <div className="flex-1 pr-4">
           <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Waste Infrastructure Bins</h3>
           <p className="text-sm font-medium text-slate-500 mt-1">Manage and monitor all IoT-enabled waste containers.</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all hover:-translate-y-0.5"
+          className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-emerald-600/30 hover:bg-emerald-700 transition-all hover:-translate-y-1 active:scale-95 flex items-center space-x-2 shrink-0 z-50 relative"
+          id="add-bin-btn"
         >
-          <Plus size={16} />
+          <Plus size={18} />
           <span>Add Bin</span>
         </button>
       </div>

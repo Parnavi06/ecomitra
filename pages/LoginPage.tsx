@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../App';
@@ -25,7 +24,7 @@ const LoginPage: React.FC = () => {
       const savedUserString = localStorage.getItem('user');
       if (savedUserString) {
         const user = JSON.parse(savedUserString);
-        if (user.role === UserRole.ADMIN) navigate('/admin/dashboard');
+        if (user.role === UserRole.ADMIN) navigate('/admin');
         else if (user.role === UserRole.OPERATOR) navigate('/operator/home');
       }
     } catch (err: any) {

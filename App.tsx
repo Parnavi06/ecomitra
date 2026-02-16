@@ -44,7 +44,7 @@ const App: React.FC = () => {
         id: user.id,
         email: user.email || '',
         name: userData.name || user.email?.split('@')[0] || 'User',
-        role: userData.role as UserRole,
+        role: (userData.role as string)?.toUpperCase() as UserRole,
         avatar: userData.avatar,
         bio: userData.bio
       };
