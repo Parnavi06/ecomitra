@@ -127,6 +127,10 @@ const AdminBins: React.FC = () => {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
+    console.log('AdminBins rendered, user role:', user?.role);
+  }, [user]);
+
+  useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 3000);
       return () => clearTimeout(timer);
@@ -134,20 +138,22 @@ const AdminBins: React.FC = () => {
   }, [toast]);
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
-      <div className="flex flex-row justify-between items-start mb-8">
+    <div className="space-y-6">
+      <div className="flex flex-row justify-between items-start mb-8 border-b border-emerald-50 pb-6">
         <div className="flex-1 pr-4">
           <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Waste Infrastructure Bins</h3>
           <p className="text-sm font-medium text-slate-500 mt-1">Manage and monitor all IoT-enabled waste containers.</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-xl shadow-emerald-600/30 hover:bg-emerald-700 transition-all hover:-translate-y-1 active:scale-95 flex items-center space-x-2 shrink-0 z-50 relative"
-          id="add-bin-btn"
-        >
-          <Plus size={18} />
-          <span>Add Bin</span>
-        </button>
+        <div className="shrink-0 pt-2">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center space-x-2 bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-[12px] uppercase tracking-widest shadow-2xl shadow-emerald-600/40 hover:bg-emerald-700 transition-all hover:-translate-y-1 active:scale-95 z-[9999] relative"
+            style={{ display: 'flex', visibility: 'visible', opacity: 1 }}
+          >
+            <Plus size={20} />
+            <span>Add Bin</span>
+          </button>
+        </div>
       </div>
       <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
         <BinTable />
