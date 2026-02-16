@@ -46,7 +46,20 @@ const OperatorHome: React.FC = () => {
   const [bins, setBins] = useState<Bin[]>([]);
 
   useEffect(() => {
-    if (user) api.getOperatorBins(user.id).then(setBins);
+    const fetchBins = () => {
+      if (user) api.getOperatorBins(user.id).then(setBins);
+    };
+
+    fetchBins();
+
+    // Subscribe to real-time updates
+    const subscription = api.subscribeToBins(() => {
+      fetchBins();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [user]);
 
   const fullCount = bins.filter(b => b.status === 'FULL').length;
@@ -132,7 +145,20 @@ const AssignedBins: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user) api.getOperatorBins(user.id).then(res => { setBins(res); setLoading(false); });
+    const fetchBins = () => {
+      if (user) api.getOperatorBins(user.id).then(res => { setBins(res); setLoading(false); });
+    };
+
+    fetchBins();
+
+    // Subscribe to real-time updates
+    const subscription = api.subscribeToBins(() => {
+      fetchBins();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [user]);
 
   return (
@@ -190,7 +216,18 @@ const ToDoList: React.FC = () => {
     }
   };
 
-  useEffect(() => { loadTodo(); }, [user]);
+  useEffect(() => {
+    loadTodo();
+
+    // Subscribe to real-time updates
+    const subscription = api.subscribeToBins(() => {
+      loadTodo();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user]);
 
   const handleEmpty = async (id: string) => {
     setProcessing(id);

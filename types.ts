@@ -1,7 +1,8 @@
 
 export enum UserRole {
   ADMIN = 'ADMIN',
-  OPERATOR = 'OPERATOR'
+  OPERATOR = 'OPERATOR',
+  GUEST = 'GUEST'
 }
 
 export interface User {
@@ -31,6 +32,7 @@ export interface Bin {
   enabled: boolean;
   lastEmptied: string; // ISO Date
   assignedOperatorId?: string;
+  localBodyEmail: string;
   compartments: Compartment[];
 }
 

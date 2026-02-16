@@ -7,6 +7,7 @@ import HowItWorksPage from './pages/HowItWorksPage';
 import LoginPage from './pages/LoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import OperatorDashboard from './pages/OperatorDashboard';
+import { supabase } from './src/lib/supabaseClient';
 
 interface AuthContextType extends AuthState {
   login: (email: string, pass: string) => Promise<void>;
@@ -24,30 +25,102 @@ export const useAuth = () => {
 const App: React.FC = () => {
   const [auth, setAuth] = useState<AuthState>({
     user: null,
-    token: localStorage.getItem('token'),
-    isAuthenticated: !!localStorage.getItem('token')
+    token: null, // Token will be managed by Supabase session
+    isAuthenticated: false
   });
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setAuth(prev => ({ ...prev, user: JSON.parse(savedUser), isAuthenticated: true }));
+  const handleSession = async (session: any) => {
+    const { user } = session;
+
+    // Fetch user role from 'users' table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role, name, avatar, bio')
+      .eq('id', user.id)
+      .single();
+
+    if (userData) {
+      const authUser: User = {
+        id: user.id,
+        email: user.email || '',
+        name: userData.name || user.email?.split('@')[0] || 'User',
+        role: userData.role as UserRole,
+        avatar: userData.avatar,
+        bio: userData.bio
+      };
+
+      setAuth({
+        user: authUser,
+        token: session.access_token,
+        isAuthenticated: true
+      });
+      localStorage.setItem('token', session.access_token);
+      localStorage.setItem('user', JSON.stringify(authUser));
+    } else if (userError) {
+      console.error('Error fetching user profile:', userError);
+      // Fallback or handle error
+      setAuth({
+        user: {
+          id: user.id,
+          email: user.email || '',
+          name: user.email?.split('@')[0] || 'User',
+          role: UserRole.GUEST, // Default to GUEST if role not found
+          avatar: null,
+          bio: null
+        },
+        token: session.access_token,
+        isAuthenticated: true
+      });
+      localStorage.setItem('token', session.access_token);
+      localStorage.setItem('user', JSON.stringify({
+        id: user.id,
+        email: user.email || '',
+        name: user.email?.split('@')[0] || 'User',
+        role: UserRole.GUEST,
+        avatar: null,
+        bio: null
+      }));
     }
+  };
+
+  useEffect(() => {
+    // Initial session check
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await handleSession(session);
+      }
+    };
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        handleSession(session);
+      } else {
+        setAuth({ user: null, token: null, isAuthenticated: false });
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, pass: string) => {
-    const { api } = await import('./services/api');
-    const response = await api.login(email, pass);
-    setAuth({
-      user: response.user,
-      token: response.token,
-      isAuthenticated: true
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: pass,
     });
-    localStorage.setItem('token', response.token);
-    localStorage.setItem('user', JSON.stringify(response.user));
+
+    if (error) throw error;
+    if (data.session) {
+      await handleSession(data.session);
+    }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setAuth({ user: null, token: null, isAuthenticated: false });
     localStorage.removeItem('token');
     localStorage.removeItem('user');

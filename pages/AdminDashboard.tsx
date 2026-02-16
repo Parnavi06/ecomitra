@@ -4,7 +4,7 @@ import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   MapPin, Trash2, LogOut, Bell,
   Clock, Map as MapIcon, User as UserIcon, List, LayoutDashboard,
-  Activity, ShieldCheck, ArrowRight, Globe
+  Activity, ShieldCheck, ArrowRight, Globe, Plus, X, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../App';
 import { api } from '../services/api';
@@ -122,6 +122,16 @@ const AdminOverview: React.FC = () => {
 };
 
 const AdminBins: React.FC = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
       <div className="flex justify-between items-end">
@@ -129,9 +139,178 @@ const AdminBins: React.FC = () => {
           <h3 className="text-3xl font-black text-slate-900 tracking-tighter">Waste Infrastructure Bins</h3>
           <p className="text-sm font-medium text-slate-500 mt-1">Manage and monitor all IoT-enabled waste containers.</p>
         </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center space-x-2 bg-emerald-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all hover:-translate-y-0.5"
+        >
+          <Plus size={16} />
+          <span>Add Bin</span>
+        </button>
       </div>
       <div className="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
         <BinTable />
+      </div>
+
+      <AddBinModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={(msg) => setToast({ message: msg, type: 'success' })}
+        onError={(msg) => setToast({ message: msg, type: 'error' })}
+      />
+
+      {toast && (
+        <div className={`fixed bottom-8 right-8 z-[100] animate-in slide-in-from-right-10 fade-in flex items-center space-x-3 px-6 py-4 rounded-2xl shadow-2xl border ${toast.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-rose-600 border-rose-500 text-white'
+          }`}>
+          {toast.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+          <span className="text-[10px] font-black uppercase tracking-widest">{toast.message}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface AddBinModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: (msg: string) => void;
+  onError: (msg: string) => void;
+}
+
+const AddBinModal: React.FC<AddBinModalProps> = ({ isOpen, onClose, onSuccess, onError }) => {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    id: '',
+    locationName: '',
+    address: '',
+    localBodyEmail: '',
+    enabled: true
+  });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Basic validation
+      if (!formData.id || !formData.locationName || !formData.address || !formData.localBodyEmail) {
+        throw new Error('All fields are required');
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.localBodyEmail)) {
+        throw new Error('Invalid email format');
+      }
+
+      await api.addBin(formData);
+      onSuccess('Bin added successfully');
+      setFormData({ id: '', locationName: '', address: '', localBodyEmail: '', enabled: true });
+      onClose();
+    } catch (err: any) {
+      onError(err.message || 'Failed to add bin');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-emerald-100 animate-in zoom-in-95 duration-300">
+        <div className="px-8 py-6 border-b border-emerald-50 flex justify-between items-center bg-emerald-50/20">
+          <h3 className="text-sm font-black text-emerald-900 uppercase tracking-widest">Register New Infrastructure</h3>
+          <button onClick={onClose} className="p-2 hover:bg-emerald-100 rounded-xl transition-colors text-emerald-900/40">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          <div className="grid grid-cols-1 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bin ID</label>
+              <input
+                type="text"
+                value={formData.id}
+                onChange={(e) => setFormData({ ...formData, id: e.target.value.toUpperCase() })}
+                placeholder="BN-X00"
+                className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold text-slate-800"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Bin Name (Location Highlight)</label>
+              <input
+                type="text"
+                value={formData.locationName}
+                onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
+                placeholder="Central Park West"
+                className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold text-slate-800"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Address / Precise Location</label>
+              <input
+                type="text"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="100 Central Park West, NY"
+                className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold text-slate-800"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Local Body Email</label>
+              <input
+                type="email"
+                value={formData.localBodyEmail}
+                onChange={(e) => setFormData({ ...formData, localBodyEmail: e.target.value })}
+                placeholder="sanitation@city.gov"
+                className="w-full px-5 py-4 rounded-2xl border border-slate-100 bg-slate-50 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-bold text-slate-800"
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-5 bg-emerald-50/50 rounded-2xl border border-emerald-100/50">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-900">Active Status</p>
+                <p className="text-[9px] font-bold text-emerald-600/60 uppercase mt-0.5">Enable monitoring immediately</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, enabled: !formData.enabled })}
+                className={`w-12 h-6 rounded-full transition-all relative ${formData.enabled ? 'bg-emerald-600' : 'bg-slate-300'}`}
+              >
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.enabled ? 'left-7' : 'left-1'}`} />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex space-x-4 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-8 py-4 rounded-2xl border border-slate-200 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-2 bg-slate-900 text-white px-12 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl shadow-slate-200 disabled:opacity-50 flex items-center justify-center min-w-[160px]"
+            >
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              ) : (
+                'Confirm Registration'
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -142,10 +321,23 @@ const BinTable: React.FC<{ limit?: number }> = ({ limit }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getAllBins().then(res => {
-      setBins(limit ? res.slice(0, limit) : res);
-      setLoading(false);
+    const fetchBins = () => {
+      api.getAllBins().then(res => {
+        setBins(limit ? res.slice(0, limit) : res);
+        setLoading(false);
+      });
+    };
+
+    fetchBins();
+
+    // Subscribe to real-time updates
+    const subscription = api.subscribeToBins(() => {
+      fetchBins(); // Refresh on any change
     });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [limit]);
 
   if (loading) return (

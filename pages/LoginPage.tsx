@@ -19,14 +19,17 @@ const LoginPage: React.FC = () => {
     setError(null);
     try {
       await login(email, password);
+      // login in App.tsx updates the auth state and localStorage
+      // We can use the result of login or check the updated state
+      // For immediate navigation after login, we can check the localStorage we just set
       const savedUserString = localStorage.getItem('user');
       if (savedUserString) {
         const user = JSON.parse(savedUserString);
-        if (user.role === UserRole.ADMIN) navigate('/admin');
-        else navigate('/operator');
+        if (user.role === UserRole.ADMIN) navigate('/admin/dashboard');
+        else if (user.role === UserRole.OPERATOR) navigate('/operator/home');
       }
-    } catch (err) {
-      setError('Authentication failed. Check your credentials.');
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Check your credentials.');
     } finally {
       setLoading(false);
     }
