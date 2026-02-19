@@ -10,6 +10,8 @@ import { useAuth } from '../App';
 import { api } from '../services/api';
 import { DashboardStats, Bin, BinStatus, UserRole } from '../types';
 import AdminSidebar from '../components/AdminSidebar';
+import { supabase } from "../src/lib/supabaseClient";
+
 
 const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -48,73 +50,93 @@ const AdminDashboard: React.FC = () => {
 };
 
 const AdminOverview: React.FC = () => {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalBins: 0,
+    activeBins: 0,
+    fullBins: 0,
+    avgFillPercentage: 0,
+    activeAlerts: 0,
+    bins: []
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getStats().then(res => {
-      setStats(res);
-      setLoading(false);
-    });
+    const fetchStats = async () => {
+      setLoading(true);
+      try {
+        const res = await api.getStats();
+        setStats(res);
+      } catch (error) {
+        console.error("Fetch stats error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
   }, []);
 
-  if (loading) return (
-    <div className="p-20 text-center">
-      <div className="flex justify-center space-x-2 mb-4">
-        <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-        <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-        <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-      </div>
-      <p className="text-emerald-900/40 text-[10px] font-black uppercase tracking-widest">Accessing Node Metrics...</p>
-    </div>
-  );
-
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total Bins"
-          value={stats?.totalBins}
-          icon={<Trash2 size={24} />}
-          color="text-emerald-600"
-          bgColor="bg-emerald-50"
-          subtitle="Registered Network Nodes"
-        />
-        <StatCard
-          title="Full Bins"
-          value={stats?.fullBins}
-          icon={<Bell size={24} />}
-          color="text-rose-600"
-          bgColor="bg-rose-50"
-          subtitle="Requiring Immediate Action"
-        />
-        <StatCard
-          title="Avg Fill Level"
-          value={`${stats?.avgFillPercentage}%`}
-          icon={<Activity size={24} />}
-          color="text-emerald-700"
-          bgColor="bg-emerald-50"
-          subtitle="Overall System Capacity"
-        />
-        <StatCard
-          title="Active Alerts"
-          value={stats?.activeAlerts}
-          icon={<ShieldCheck size={24} />}
-          color="text-amber-600"
-          bgColor="bg-amber-50"
-          subtitle="Unresolved System Flags"
-        />
-      </div>
-
-      <div className="bg-white rounded-[2.5rem] border border-emerald-100 overflow-hidden shadow-sm shadow-emerald-100/20">
-        <div className="px-8 py-6 border-b border-emerald-50 flex justify-between items-center bg-emerald-50/20">
-          <h3 className="text-sm font-black text-emerald-900 uppercase tracking-widest">Recent Infrastructure Activity</h3>
-          <Link to="/admin/bins" className="text-xs font-black text-emerald-600 hover:text-emerald-700 transition-colors uppercase tracking-widest flex items-center">
-            View Grid View <ArrowRight size={14} className="ml-1" />
-          </Link>
+    <div className="relative min-h-[400px]">
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 z-50 bg-white/50 backdrop-blur-[2px] flex items-center justify-center rounded-[2.5rem]">
+          <div className="flex flex-col items-center">
+            <div className="flex justify-center space-x-2 mb-4">
+              <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <p className="text-emerald-900/40 text-[10px] font-black uppercase tracking-widest">Updating Metrics...</p>
+          </div>
         </div>
-        <div className="p-0">
-          <BinTable limit={5} />
+      )}
+
+      <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Bins"
+            value={stats.totalBins}
+            icon={<Trash2 size={24} />}
+            color="text-emerald-600"
+            bgColor="bg-emerald-50"
+            subtitle="Registered Network Nodes"
+          />
+          <StatCard
+            title="Full Bins"
+            value={stats.fullBins}
+            icon={<Bell size={24} />}
+            color="text-rose-600"
+            bgColor="bg-rose-50"
+            subtitle="Requiring Immediate Action"
+          />
+          <StatCard
+            title="Avg Fill Level"
+            value={`${stats.avgFillPercentage}%`}
+            icon={<Activity size={24} />}
+            color="text-emerald-700"
+            bgColor="bg-emerald-50"
+            subtitle="Overall System Capacity"
+          />
+          <StatCard
+            title="Active Alerts"
+            value={stats.activeAlerts}
+            icon={<ShieldCheck size={24} />}
+            color="text-amber-600"
+            bgColor="bg-amber-50"
+            subtitle="Unresolved System Flags"
+          />
+        </div>
+
+        <div className="bg-white rounded-[2.5rem] border border-emerald-100 overflow-hidden shadow-sm shadow-emerald-100/20">
+          <div className="px-8 py-6 border-b border-emerald-50 flex justify-between items-center bg-emerald-50/20">
+            <h3 className="text-sm font-black text-emerald-900 uppercase tracking-widest">Recent Infrastructure Activity</h3>
+            <Link to="/admin/bins" className="text-xs font-black text-emerald-600 hover:text-emerald-700 transition-colors uppercase tracking-widest flex items-center">
+              View Grid View <ArrowRight size={14} className="ml-1" />
+            </Link>
+          </div>
+          <div className="p-0">
+            <BinTable limit={5} />
+          </div>
         </div>
       </div>
     </div>
@@ -325,42 +347,77 @@ const AddBinModal: React.FC<AddBinModalProps> = ({ isOpen, onClose, onSuccess, o
 };
 
 const BinTable: React.FC<{ limit?: number }> = ({ limit }) => {
-  const [bins, setBins] = useState<Bin[]>([]);
+  const [bins, setBins, res] = useState<Bin[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Fetch Bins useEffect
   useEffect(() => {
-    const fetchBins = () => {
-      api.getAllBins().then(res => {
-        setBins(limit ? res.slice(0, limit) : res);
+    const fetchBins = async () => {
+      setLoading(true);
+      try {
+        const res = await api.getAllBins();
+        console.log("🔥 STATE BEFORE SET:", bins);
+        console.log("🔥 RESPONSE FROM API:", res);
+        setBins(res ?? []);
+      } catch (error) {
+        console.error("Error fetching bins:", error);
+      } finally {
         setLoading(false);
-      });
+      }
     };
-
     fetchBins();
-
-    // Subscribe to real-time updates
-    const subscription = api.subscribeToBins(() => {
-      fetchBins(); // Refresh on any change
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [limit]);
 
-  if (loading) return (
-    <div className="p-20 text-center">
-      <div className="flex justify-center space-x-2 mb-4">
-        <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-        <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-        <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-      </div>
-      <p className="text-emerald-900/40 text-[10px] font-black uppercase tracking-widest">Syncing Infrastructure Grid...</p>
-    </div>
-  );
+  // Real-time Subscription useEffect
+  useEffect(() => {
+    const channel = supabase
+      .channel("waste_logs_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "waste_logs",
+        },
+        (payload) => {
+          console.log("Realtime log:", payload.new);
+          setBins((prevBins) =>
+            prevBins.map((bin) =>
+              bin.id === payload.new.bin_id
+                ? {
+                  ...bin,
+                  fill_percentage: payload.new.fill_percentage,
+                  fill_overall: payload.new.fill_overall,
+                  fill_organic: payload.new.fill_organic,
+                  fill_plastic: payload.new.fill_plastic,
+                  fill_metal: payload.new.fill_metal,
+                  fill_unclassified: payload.new.fill_unclassified,
+                }
+                : bin
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto relative">
+      {/* Non-blocking loader overlay */}
+      {loading && (
+        <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-[1px] flex items-center justify-center">
+          <div className="flex space-x-2">
+            <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 bg-emerald-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        </div>
+      )}
+
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="bg-emerald-50/30 border-b border-emerald-50">
@@ -372,17 +429,17 @@ const BinTable: React.FC<{ limit?: number }> = ({ limit }) => {
           </tr>
         </thead>
         <tbody className="divide-y divide-emerald-50/50">
-          {bins.map(bin => {
-            const avgFill = Math.round(bin.compartments.reduce((a, b) => a + b.fillLevel, 0) / bin.compartments.length);
+          {bins?.map(bin => {
+            const avgFill = (bin.compartments ?? []).length ? Math.round(bin.compartments.reduce((a, b) => a + b.fillLevel, 0) / bin.compartments.length) : 0;
             return (
-              <tr key={bin.id} className="hover:bg-emerald-50/30 transition-colors group">
+              <tr key={bin.bin_id} className="hover:bg-emerald-50/30 transition-colors group">
                 <td className="px-8 py-6">
-                  <span className="font-mono text-[10px] font-black text-emerald-900/60 bg-emerald-50 px-2 py-1 rounded-md">{bin.id}</span>
+                  <span className="font-mono text-[10px] font-black text-emerald-900/60 bg-emerald-50 px-2 py-1 rounded-md">{bin.bin_id}</span>
                 </td>
                 <td className="px-8 py-6">
                   <div>
                     <p className="text-sm font-black text-slate-900 tracking-tight">{bin.locationName}</p>
-                    <p className="text-[10px] text-emerald-600/50 font-black uppercase tracking-widest mt-0.5">{bin.latitude.toFixed(4)}, {bin.longitude.toFixed(4)}</p>
+                    <p className="text-[10px] text-emerald-600/50 font-black uppercase tracking-widest mt-0.5">{bin.latitude?.toFixed(4)}, {bin.longitude?.toFixed(4)}</p>
                   </div>
                 </td>
                 <td className="px-8 py-6">
@@ -403,7 +460,7 @@ const BinTable: React.FC<{ limit?: number }> = ({ limit }) => {
                 <td className="px-8 py-6 text-right">
                   <button
                     onClick={() => {
-                      api.markAsEmptied(bin.id).then(() => {
+                      api.markAsEmptied(bin.bin_id).then(() => {
                         api.getAllBins().then(res => setBins(limit ? res.slice(0, limit) : res));
                       });
                     }}

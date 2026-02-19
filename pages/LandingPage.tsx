@@ -4,6 +4,13 @@ import { Link } from 'react-router-dom';
 import { Trash2, BarChart3, Zap, Globe, Map, Settings, Users, ArrowRight, ShieldCheck, Cpu, Cloud, Activity, Linkedin, Camera, CheckCircle, Smartphone, Wifi, Bell, LayoutDashboard } from 'lucide-react';
 import { api } from '../services/api';
 import { TeamMember } from '../types';
+import parnaviImg from "../src/lib/assets/Parnavi.jpeg";
+import selloraImg from "../src/lib/assets/Sellora.jpeg";
+import divyaImg from "../src/lib/assets/Divya.jpeg";
+import khushiImg from "../src/lib/assets/Khushi.jpeg";
+import adithyaImg from "../src/lib/assets/Adithya.jpeg";
+import aryaImg from "../src/lib/assets/Arya.jpeg";
+
 
 // Custom VIT-style Image Slider Component
 const HeroSlider = () => {
@@ -55,10 +62,73 @@ const HeroSlider = () => {
 };
 
 const LandingPage: React.FC = () => {
-  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [team, setTeam] = useState<TeamMember[]>([
+    {
+      name: "Parnavi Rane",
+      role: "FrontEnd Developer",
+      linkedin: "https://www.linkedin.com/in/parnavi-rane-234a58329/",
+      imageUrl: parnaviImg,
+      isProfessor: false
+    },
+    {
+      name: "Khushi Gaurkar",
+      role: "Backend Developer",
+      linkedin: "https://www.linkedin.com/in/khushigaurkar/",
+      imageUrl: khushiImg,
+      isProfessor: false
+    },
+    {
+      name: "Arya Parab",
+      role: "",
+      linkedin: "https://www.linkedin.com/in/arya-parab/",
+      imageUrl: aryaImg,
+      isProfessor: false
+    },
+    {
+      name: "Adithya Achary",
+      role: "Backend Developer",
+      linkedin: "https://www.linkedin.com/in/adithya-achary-8871a932a/",
+      imageUrl: adithyaImg,
+      isProfessor: false
+    },
+    {
+      name: "Divya Bhor",
+      role: "Data Analyst",
+      linkedin: "https://www.linkedin.com/in/divya-bhor-1b5269330/",
+      imageUrl: divyaImg,
+      isProfessor: false
+    },
+    {
+      name: "Sellora Panda",
+      role: "Mobile Developer",
+      linkedin: "https://www.linkedin.com/in/sellora-biswanath-panda-348139329/",
+      imageUrl: selloraImg,
+      isProfessor: false
+    },
+    {
+      name: "Dr. Dhananjay Patel",
+      role: "Mentor",
+      linkedin: "https://www.linkedin.com/in/dhananjay-patel-ph-d-27491931/",
+      imageUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80",
+      isProfessor: true
+    },
+    {
+      id: 8,
+      name: "Prof. Vinita Bhandiwad",
+      role: "Mentor",
+      linkedin: "https://www.linkedin.com/in/vinita-bhandiwad-450294116/",
+      imageUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80",
+      isProfessor: true
+    }
+  ]);
 
   useEffect(() => {
-    api.getTeam().then(setTeam);
+    // Optionally fetch updates from API, but we keep the initial data populated
+    api.getTeam().then(data => {
+      if (data && data.length > 0) {
+        setTeam(data);
+      }
+    });
   }, []);
 
   const handleImageUpdate = async (id: number, file: File) => {
@@ -162,7 +232,6 @@ const LandingPage: React.FC = () => {
               <TeamMemberCard
                 key={member.id}
                 member={member}
-                onImageUpload={(file) => handleImageUpdate(member.id, file)}
               />
             ))}
           </div>
@@ -180,7 +249,6 @@ const LandingPage: React.FC = () => {
               <TeamMemberCard
                 key={mentor.id}
                 member={mentor}
-                onImageUpload={(file) => handleImageUpdate(mentor.id, file)}
               />
             ))}
           </div>
@@ -210,38 +278,6 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* LinkedIn Connectivity Section */}
-      <section id="connect" className="py-24 bg-slate-900 text-white border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-emerald-400 font-black tracking-widest text-[10px] uppercase mb-4">Connect With Us</h2>
-            <h3 className="text-4xl font-black tracking-tighter">Our LinkedIn Profiles</h3>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
-            {team.map(member => (
-              <a
-                key={member.id}
-                href={member.linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group p-6 bg-slate-800/50 rounded-3xl border border-slate-700/50 hover:bg-emerald-600 hover:border-emerald-500 transition-all text-center"
-              >
-                <div className="flex flex-col items-center space-y-4">
-                  <div className="bg-slate-700 p-3 rounded-2xl group-hover:bg-white/20 transition-colors">
-                    <Linkedin size={24} className="text-white" />
-                  </div>
-                  <div>
-                    <p className="font-black tracking-tight text-white group-hover:text-white transition-colors">{member.name.split(' ')[0]}</p>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 group-hover:text-emerald-100 transition-colors mt-1">{member.role.split(' ')[0]}</p>
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <footer className="py-12 bg-slate-900 text-white text-center">
         <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">© 2026 Ecomitra System. All rights reserved.</p>
       </footer>
@@ -249,7 +285,7 @@ const LandingPage: React.FC = () => {
   );
 };
 
-const FeatureCard = ({ icon, title, desc }: any) => (
+const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; desc: string }> = ({ icon, title, desc }) => (
   <div className="bg-white p-10 rounded-3xl border border-slate-100 hover:shadow-xl transition-all group">
     <div className="bg-emerald-50 text-emerald-600 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-emerald-600 group-hover:text-white transition-colors">{icon}</div>
     <h4 className="text-xl font-black mb-3 text-slate-900">{title}</h4>
@@ -257,7 +293,7 @@ const FeatureCard = ({ icon, title, desc }: any) => (
   </div>
 );
 
-const StepItem = ({ icon, title, desc }: any) => (
+const StepItem: React.FC<{ icon: React.ReactNode; title: string; desc: string }> = ({ icon, title, desc }) => (
   <div className="flex items-start space-x-6 group">
     <div className="bg-emerald-50 text-emerald-600 p-4 rounded-2xl shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-sm">
       {icon}
@@ -269,7 +305,7 @@ const StepItem = ({ icon, title, desc }: any) => (
   </div>
 );
 
-const TeamMemberCard = ({ member, onImageUpload }: { member: TeamMember, onImageUpload: (file: File) => void | Promise<void> }) => {
+const TeamMemberCard: React.FC<{ member: TeamMember, onImageUpload: (file: File) => void | Promise<void> }> = ({ member, onImageUpload }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (

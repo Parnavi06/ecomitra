@@ -46,8 +46,12 @@ const OperatorHome: React.FC = () => {
   const [bins, setBins] = useState<Bin[]>([]);
 
   useEffect(() => {
-    const fetchBins = () => {
-      if (user) api.getOperatorBins(user.id).then(setBins);
+    const fetchBins = async () => {
+      if (!user) return;
+      const data = await api.getOperatorBins(user.id);
+      console.log("👷 OPERATOR BINS:", data);
+      setBins(data ?? []);
+
     };
 
     fetchBins();

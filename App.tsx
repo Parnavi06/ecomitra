@@ -23,10 +23,21 @@ export const useAuth = () => {
 };
 
 const App: React.FC = () => {
-  const [auth, setAuth] = useState<AuthState>({
-    user: null,
-    token: null, // Token will be managed by Supabase session
-    isAuthenticated: false
+  const [auth, setAuth] = useState<AuthState>(() => {
+    const savedUser = localStorage.getItem('user');
+    const savedToken = localStorage.getItem('token');
+    if (savedUser && savedToken) {
+      return {
+        user: JSON.parse(savedUser),
+        token: savedToken,
+        isAuthenticated: true
+      };
+    }
+    return {
+      user: null,
+      token: null,
+      isAuthenticated: false
+    };
   });
 
   const handleSession = async (session: any) => {
@@ -59,31 +70,35 @@ const App: React.FC = () => {
     } else if (userError) {
       console.error('Error fetching user profile:', userError);
       // Fallback or handle error
-      setAuth({
-        user: {
-          id: user.id,
-          email: user.email || '',
-          name: user.email?.split('@')[0] || 'User',
-          role: UserRole.GUEST, // Default to GUEST if role not found
-          avatar: null,
-          bio: null
-        },
-        token: session.access_token,
-        isAuthenticated: true
-      });
-      localStorage.setItem('token', session.access_token);
-      localStorage.setItem('user', JSON.stringify({
+      const guestUser: User = {
         id: user.id,
         email: user.email || '',
         name: user.email?.split('@')[0] || 'User',
         role: UserRole.GUEST,
         avatar: null,
         bio: null
-      }));
+      };
+
+      setAuth({
+        user: guestUser,
+        token: session.access_token,
+        isAuthenticated: true
+      });
+      localStorage.setItem('token', session.access_token);
+      localStorage.setItem('user', JSON.stringify(guestUser));
     }
   };
 
   useEffect(() => {
+    // Only check Supabase session if we don't have a fake user session
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      // If it's a real supabase user ID (UUID-like), we might want to refresh session
+      // For now, if user exists in localStorage, we trust it for the "fake" login logic
+      if (user.id.length < 30) return; // Skip supabase check for simple mock IDs
+    }
+
     // Initial session check
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -98,9 +113,13 @@ const App: React.FC = () => {
       if (session) {
         handleSession(session);
       } else {
-        setAuth({ user: null, token: null, isAuthenticated: false });
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // Only clear if not a mock user (mock users don't have supabase sessions)
+        const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+        if (currentUser && currentUser.id.length > 30) {
+          setAuth({ user: null, token: null, isAuthenticated: false });
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
       }
     });
 
@@ -108,6 +127,38 @@ const App: React.FC = () => {
   }, []);
 
   const login = async (email: string, pass: string) => {
+    // ---------------------------------------------------------
+    // FAKE LOGIN LOGIC FOR DEVELOPMENT (BACKEND NOT READY)
+    // ---------------------------------------------------------
+    if (email === 'admin@ecomitra.com') {
+      const mockAdmin: User = {
+        id: 'mock-admin-id',
+        email: 'admin@ecomitra.com',
+        name: 'Admin User',
+        role: UserRole.ADMIN,
+      };
+      const mockToken = 'mock-admin-token';
+      setAuth({ user: mockAdmin, token: mockToken, isAuthenticated: true });
+      localStorage.setItem('user', JSON.stringify(mockAdmin));
+      localStorage.setItem('token', mockToken);
+      return;
+    }
+
+    if (email === 'operator@ecomitra.com') {
+      const mockOperator: User = {
+        id: 'mock-operator-id',
+        email: 'operator@ecomitra.com',
+        name: 'Operator User',
+        role: UserRole.OPERATOR,
+      };
+      const mockToken = 'mock-operator-token';
+      setAuth({ user: mockOperator, token: mockToken, isAuthenticated: true });
+      localStorage.setItem('user', JSON.stringify(mockOperator));
+      localStorage.setItem('token', mockToken);
+      return;
+    }
+    // ---------------------------------------------------------
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password: pass,

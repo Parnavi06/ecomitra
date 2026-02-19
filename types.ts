@@ -34,6 +34,7 @@ export interface Bin {
   assignedOperatorId?: string;
   localBodyEmail: string;
   compartments: Compartment[];
+  is_active: boolean;
 }
 
 export interface TeamMember {
@@ -47,9 +48,11 @@ export interface TeamMember {
 
 export interface DashboardStats {
   totalBins: number;
+  activeBins: number;
   fullBins: number;
   avgFillPercentage: number;
   activeAlerts: number;
+  bins: Bin[];
 }
 
 export interface AuthState {

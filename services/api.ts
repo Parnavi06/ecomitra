@@ -32,65 +32,130 @@ export const api = {
   },
 
   getStats: async (): Promise<DashboardStats> => {
-    const { data: bins, error } = await supabase.from('bins').select('*').eq('enabled', true);
-    if (error) throw error;
+    try {
+      const { data: bins, error } = await supabase
+        .from('bins')
+        .select('*')
+        .eq('is_active', true);
+      if (error) {
+        console.error(error);
+        return {
+          totalBins: 0,
+          activeBins: 0,
+          fullBins: 0,
+          avgFillPercentage: 0,
+          activeAlerts: 0,
+          bins: []
+        };
+      }
 
-    const full = bins.filter(b => b.status === 'FULL').length;
-    const allLevels = bins.flatMap(b => (b.compartments as Compartment[]).map(c => c.fillLevel));
-    const avg = allLevels.length ? Math.round(allLevels.reduce((a, b) => a + b, 0) / allLevels.length) : 0;
+      const binList = (bins || []) as Bin[];
+      const full = binList.filter(b => b.status === 'FULL').length;
+      const allLevels = binList.flatMap(b => (b.compartments ?? [] as Compartment[]).map(c => c.fillLevel));
+      const avg = allLevels.length ? Math.round(allLevels.reduce((a, b) => a + b, 0) / allLevels.length) : 0;
 
-    return {
-      totalBins: bins.length,
-      fullBins: full,
-      avgFillPercentage: avg,
-      activeAlerts: bins.filter(b => b.status !== 'NORMAL').length
-    };
+      return {
+        totalBins: binList.length,
+        activeBins: binList.filter(b => b.is_active).length,
+        fullBins: full,
+        avgFillPercentage: avg,
+        activeAlerts: binList.filter(b => b.status !== 'NORMAL').length,
+        bins: binList
+      };
+    } catch (error) {
+      console.error("Error in api.getStats:", error);
+      return {
+        totalBins: 0,
+        activeBins: 0,
+        fullBins: 0,
+        avgFillPercentage: 0,
+        activeAlerts: 0,
+        bins: []
+      };
+    }
   },
 
   getAllBins: async (): Promise<Bin[]> => {
-    const { data, error } = await supabase.from('bins').select('*').order('id', { ascending: true });
-    if (error) throw error;
-    return data as Bin[];
+    console.log("🔥 NEW API FUNCTION RUNNING");
+    try {
+      const { data: bins, error: binsError } = await supabase
+        .from('bins')
+        .select('*')
+        .order('bin_id', { ascending: true });
+
+      if (binsError) throw binsError;
+
+      const { data: logsData } = await supabase
+        .from('latest_waste_logs')
+        .select('*');
+      const logs = (logsData ?? []) as any[];
+
+      const mergedBins = (bins ?? []).map((bin: any) => {
+        const latestLog = logs.find((log: any) => log.bin_id === bin.bin_id);
+        if (latestLog) {
+          return {
+            ...bin,
+            status: latestLog.status ?? bin.status,
+            compartments: latestLog.compartments ?? bin.compartments
+          };
+        }
+        return bin;
+      });
+
+      return mergedBins as Bin[];
+    } catch (error) {
+      console.error("Error in api.getAllBins:", error);
+      return [];
+    }
   },
 
   getOperatorBins: async (operatorId: string): Promise<Bin[]> => {
-    const { data, error } = await supabase
-      .from('bins')
-      .select('*')
-      .eq('assigned_operator_id', operatorId)
-      .eq('enabled', true)
-      .order('id', { ascending: true });
-    if (error) throw error;
-    return data as Bin[];
+    try {
+      const { data, error } = await supabase
+        .from('bins')
+        .select('*')
+        .eq('assigned_operator_id', operatorId)
+        .order('id', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Bin[];
+    } catch (error) {
+      console.error("Error in api.getOperatorBins:", error);
+      return [];
+    }
   },
 
   markAsEmptied: async (binId: string): Promise<Bin> => {
-    const { data: currentBin, error: fetchError } = await supabase
-      .from('bins')
-      .select('compartments')
-      .eq('id', binId)
-      .single();
+    try {
+      const { data: currentBin, error: fetchError } = await supabase
+        .from('bins')
+        .select('compartments')
+        .eq('id', binId)
+        .single();
 
-    if (fetchError) throw fetchError;
+      if (fetchError) throw fetchError;
 
-    const emptiedCompartments = (currentBin.compartments as Compartment[]).map(c => ({
-      ...c,
-      fillLevel: 0
-    }));
+      const emptiedCompartments = (currentBin.compartments as Compartment[]).map(c => ({
+        ...c,
+        fillLevel: 0
+      }));
 
-    const { data, error } = await supabase
-      .from('bins')
-      .update({
-        compartments: emptiedCompartments,
-        status: 'NORMAL',
-        last_emptied: new Date().toISOString()
-      })
-      .eq('id', binId)
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from('bins')
+        .update({
+          compartments: emptiedCompartments,
+          status: 'NORMAL',
+          last_emptied: new Date().toISOString()
+        })
+        .eq('id', binId)
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data as Bin;
+      if (error) throw error;
+      return data as Bin;
+    } catch (error) {
+      console.error("Error in api.markAsEmptied:", error);
+      throw error;
+    }
   },
 
   // Real-time subscription helper
@@ -102,77 +167,64 @@ export const api = {
   },
 
   getTeam: async (): Promise<TeamMember[]> => {
-    const { data, error } = await supabase.from('team').select('*').order('id', { ascending: true });
-    if (error) return []; // Fallback if team table doesn't exist yet
-    return data as TeamMember[];
+    try {
+      const { data, error } = await supabase.from('team').select('*').order('id', { ascending: true });
+      if (error) throw error;
+      return data as TeamMember[];
+    } catch (error) {
+      console.error("Error in api.getTeam:", error);
+      throw error;
+    }
   },
 
   updateTeamMemberImage: async (id: number, imageUrl: string): Promise<TeamMember> => {
-    const { data, error } = await supabase
-      .from('team')
-      .update({ image_url: imageUrl })
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return data as TeamMember;
-  },
-
-  simulateFill: async (binId: string, level: number): Promise<Bin> => {
-    const { data: currentBin, error: fetchError } = await supabase
-      .from('bins')
-      .select('compartments')
-      .eq('id', binId)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const updatedCompartments = (currentBin.compartments as Compartment[]).map(c => ({
-      ...c,
-      fillLevel: level
-    }));
-
-    const { data, error } = await supabase
-      .from('bins')
-      .update({
-        compartments: updatedCompartments,
-        status: calculateStatus(updatedCompartments)
-      })
-      .eq('id', binId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as Bin;
+    try {
+      const { data, error } = await supabase
+        .from('team')
+        .update({ image_url: imageUrl })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as TeamMember;
+    } catch (error) {
+      console.error("Error in api.updateTeamMemberImage:", error);
+      throw error;
+    }
   },
 
   addBin: async (binData: { id: string; locationName: string; address: string; localBodyEmail: string; enabled: boolean }): Promise<Bin> => {
-    const defaultCompartments: Compartment[] = [
-      { id: 'c1', name: 'Organic', fillLevel: 0 },
-      { id: 'c2', name: 'Plastic', fillLevel: 0 },
-      { id: 'c3', name: 'Metal', fillLevel: 0 }
-    ];
+    try {
+      const defaultCompartments: Compartment[] = [
+        { id: 'c1', name: 'Organic', fillLevel: 0 },
+        { id: 'c2', name: 'Plastic', fillLevel: 0 },
+        { id: 'c3', name: 'Metal', fillLevel: 0 }
+      ];
 
-    const { data, error } = await supabase
-      .from('bins')
-      .insert([
-        {
-          id: binData.id,
-          locationName: binData.locationName,
-          address: binData.address,
-          local_body_email: binData.localBodyEmail,
-          enabled: binData.enabled,
-          status: 'NORMAL',
-          compartments: defaultCompartments,
-          last_emptied: new Date().toISOString(),
-          latitude: 0, // Default coordinates as placeholder
-          longitude: 0
-        }
-      ])
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from('bins')
+        .insert([
+          {
+            id: binData.id,
+            locationName: binData.locationName,
+            address: binData.address,
+            local_body_email: binData.localBodyEmail,
+            enabled: binData.enabled,
+            status: 'NORMAL',
+            compartments: defaultCompartments,
+            last_emptied: new Date().toISOString(),
+            latitude: 0, // Default coordinates as placeholder
+            longitude: 0
+          }
+        ])
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data as Bin;
+      if (error) throw error;
+      return data as Bin;
+    } catch (error) {
+      console.error("Error in api.addBin:", error);
+      throw error;
+    }
   }
 };
